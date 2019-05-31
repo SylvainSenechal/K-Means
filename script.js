@@ -5,6 +5,71 @@ let ctx, canvas, offsetCanvas
 let scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container
 
 let tensorImg = []
+let nbCluster = 5
+let middleCluster = []
+let clusters = Array(nbCluster).fill().map( () => [])
+let points = []
+
+const initkMeans = () => {
+  // TODO: A init sur un point plutot que full random
+  for (let i = 0; i < nbCluster; i++) { // premier centres randoms
+    middleCluster[i] = {x: Math.random()*255, y: Math.random()*255, z: Math.random()*255}
+  }
+
+  for (let i = 0; i < points.length; i++) { // Assignation des points
+    let clusterIndex = 0
+    let minDst = 10000
+    for (let j = 0; j < nbCluster; j++) {
+      let dst = Math.abs(points[i].x - middleCluster[j].x) + Math.abs(points[i].y - middleCluster[j].y) + Math.abs(points[i].z - middleCluster[j].z)
+      if (dst < minDst) {
+        minDst = dst
+        clusterIndex = j
+      }
+    }
+    clusters[clusterIndex].push(points[i])
+  }
+}
+
+const kMeanIteration = () => {
+  // calcul middleCluster :
+  for (let i = 0; i < nbCluster; i++) {
+    let x = 0
+    let y = 0
+    let z = 0
+    for (let j = 0; j < clusters[i].length; j++) {
+      x += clusters[i][j].x
+      y += clusters[i][j].y
+      z += clusters[i][j].z
+    }
+    middleCluster[i] = {x: x/clusters[i].length, y: y/clusters[i].length, z: z/clusters[i].length}
+  }
+
+  // Assignation points
+  clusters = Array(nbCluster).fill().map( () => [])
+  for (let i = 0; i < points.length; i++) {
+    let clusterIndex = 0
+    let minDst = 10000
+    for (let j = 0; j < nbCluster; j++) {
+      let dst = Math.abs(points[i].x - middleCluster[j].x) + Math.abs(points[i].y - middleCluster[j].y) + Math.abs(points[i].z - middleCluster[j].z)
+      if (dst < minDst) {
+        minDst = dst
+        clusterIndex = j
+      }
+    }
+    clusters[clusterIndex].push(points[i])
+  }
+  dstTotal()
+}
+
+const dstTotal = () => {
+  let dst = 0
+  for (let i = 0; i < nbCluster; i++) {
+    for (let j = 0; j < clusters[i].length; j++) {
+      dst += Math.abs(clusters[i][j].x - middleCluster[i].x) + Math.abs(clusters[i][j].y - middleCluster[i].y) + Math.abs(clusters[i][j].z - middleCluster[i].z)
+    }
+  }
+  console.log("Distance kmeans : ", dst)
+}
 
 const init = () => {
   canvas = document.getElementById('canvasImg')
@@ -133,6 +198,8 @@ const drawTensor = () => {
   let points = new THREE.Points(geometry, material)
   scene.add(points)
   camera.lookAt(0, 0, 0)
+
+  initkMeans()
 }
 
 
@@ -142,6 +209,7 @@ const getTensorFromImg = () => {
   console.log(img.length)
   for (let i = 0; i < img.length; i+=4) {
     tensorImg.push([img[i], img[i+1], img[i+2]])
+    points.push({x: img[i], y: img[i+1], z: img[i+2]})
   }
   // for (let i = 0; i < offsetCanvas.width; i++) {
   //   for (let j = 0; j < offsetCanvas.height; j++) {
@@ -185,6 +253,8 @@ const move = () => {
 }
 
 document.onkeydown = e => {
+  kMeanIteration()
+
 	if(e.keyCode == 90) { haut 	= 	true }
 	if(e.keyCode == 68) { droite = 	true }
 	if(e.keyCode == 83) { bas 	  = 	true }
