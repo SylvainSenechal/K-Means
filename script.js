@@ -5,28 +5,35 @@ let ctx, canvas, offsetCanvas
 let scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container
 
 let tensorImg = []
-let nbCluster = 5
+let nbCluster = 7 // TODO: Chercher le meilleur k dans l'algo
 let middleCluster = []
 let clusters = Array(nbCluster).fill().map( () => [])
-let points = []
 
 const initkMeans = () => {
-  // TODO: A init sur un point plutot que full random
-  for (let i = 0; i < nbCluster; i++) { // premier centres randoms
-    middleCluster[i] = {x: Math.random()*255, y: Math.random()*255, z: Math.random()*255}
+  for (let i = 0; i < nbCluster; i++) {
+    let index = Math.floor(Math.random()*(tensorImg.length/3))*3 // premier centres randoms mais sur un point
+    let x = tensorImg[index]
+    let y = tensorImg[index+1]
+    let z = tensorImg[index+2]
+    let geometry = new THREE.BoxGeometry(10, 10, 10)
+    let material = new THREE.MeshBasicMaterial( {color: 0x00ff00} )
+    let cube = new THREE.Mesh(geometry, material)
+    cube.position.set(x, y, z)
+    scene.add(cube)
+    middleCluster[i] = {x: x, y: y, z: z, mesh: cube}
   }
 
-  for (let i = 0; i < points.length; i++) { // Assignation des points
+  for (let i = 0; i < tensorImg.length; i+=3) { // Assignation des points
     let clusterIndex = 0
     let minDst = 10000
     for (let j = 0; j < nbCluster; j++) {
-      let dst = Math.abs(points[i].x - middleCluster[j].x) + Math.abs(points[i].y - middleCluster[j].y) + Math.abs(points[i].z - middleCluster[j].z)
+      let dst = Math.abs(tensorImg[i] - middleCluster[j].x) + Math.abs(tensorImg[i+1] - middleCluster[j].y) + Math.abs(tensorImg[i+2] - middleCluster[j].z)
       if (dst < minDst) {
         minDst = dst
         clusterIndex = j
       }
     }
-    clusters[clusterIndex].push(points[i])
+    clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
   }
 }
 
@@ -36,27 +43,28 @@ const kMeanIteration = () => {
     let x = 0
     let y = 0
     let z = 0
-    for (let j = 0; j < clusters[i].length; j++) {
-      x += clusters[i][j].x
-      y += clusters[i][j].y
-      z += clusters[i][j].z
+    for (let j = 0; j < clusters[i].length; j+=3) {
+      x += clusters[i][j]
+      y += clusters[i][j+1]
+      z += clusters[i][j+2]
     }
-    middleCluster[i] = {x: x/clusters[i].length, y: y/clusters[i].length, z: z/clusters[i].length}
+    middleCluster[i].mesh.position.set(x/(clusters[i].length/3), y/(clusters[i].length/3), z/(clusters[i].length/3))
+    middleCluster[i] = {x: x/(clusters[i].length/3), y: y/(clusters[i].length/3), z: z/(clusters[i].length/3), mesh: middleCluster[i].mesh}
   }
 
   // Assignation points
   clusters = Array(nbCluster).fill().map( () => [])
-  for (let i = 0; i < points.length; i++) {
+  for (let i = 0; i < tensorImg.length; i+=3) {
     let clusterIndex = 0
     let minDst = 10000
     for (let j = 0; j < nbCluster; j++) {
-      let dst = Math.abs(points[i].x - middleCluster[j].x) + Math.abs(points[i].y - middleCluster[j].y) + Math.abs(points[i].z - middleCluster[j].z)
+      let dst = Math.abs(tensorImg[i] - middleCluster[j].x) + Math.abs(tensorImg[i+1] - middleCluster[j].y) + Math.abs(tensorImg[i+2] - middleCluster[j].z)
       if (dst < minDst) {
         minDst = dst
         clusterIndex = j
       }
     }
-    clusters[clusterIndex].push(points[i])
+    clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
   }
   dstTotal()
 }
@@ -64,8 +72,8 @@ const kMeanIteration = () => {
 const dstTotal = () => {
   let dst = 0
   for (let i = 0; i < nbCluster; i++) {
-    for (let j = 0; j < clusters[i].length; j++) {
-      dst += Math.abs(clusters[i][j].x - middleCluster[i].x) + Math.abs(clusters[i][j].y - middleCluster[i].y) + Math.abs(clusters[i][j].z - middleCluster[i].z)
+    for (let j = 0; j < clusters[i].length; j+=3) {
+      dst += Math.abs(clusters[i][j] - middleCluster[i].x) + Math.abs(clusters[i][j+1] - middleCluster[i].y) + Math.abs(clusters[i][j+2] - middleCluster[i].z)
     }
   }
   console.log("Distance kmeans : ", dst)
@@ -95,7 +103,7 @@ const uploadImage = e => {
     img.onload = () => {
       ctx.canvas.width = img.width
       ctx.canvas.height = img.height
-      ctx.drawImage(img, 0, 0, 200, 100)
+      ctx.drawImage(img, 0, 0, 300, 300)
 
       offsetCanvas = document.createElement('canvas')
       offsetCanvas.width = img.width
@@ -120,7 +128,7 @@ const createScene = () => {
 	farPlane = 40000
 
 	camera = new THREE.PerspectiveCamera(fieldOfView, aspectRatio, nearPlane, farPlane)
-  camera.position.set(50, 50, 400)
+  camera.position.set(70, 125, 400)
 
 	renderer = new THREE.WebGLRenderer({ // voir tous les arguments existants
 		alpha: true,
@@ -168,29 +176,13 @@ const createAxis = () => {
 
 const drawTensor = () => {
   console.log("startDraw")
-  // tensorImg.forEach( col => col.forEach( line => {
-  //   let geometry = new THREE.Geometry()
-  //   geometry.vertices.push(new THREE.Vector3(line[0], line[1], line[2]))
-  //
-  //   let material = new THREE.PointsMaterial({color: new THREE.Color(line[0]/255, line[1]/255, line[2]/255)})
-  //   let point = new THREE.Points(geometry, material)
-  //   scene.add(point)
-  // }))
 
-  // for (let i = 0; i < tensorImg.length; i++) {
-  //   let geometry = new THREE.Geometry()
-  //   geometry.vertices.push(new THREE.Vector3(tensorImg[i][0], tensorImg[i][1], tensorImg[i][2]))
-  //
-  //   let material = new THREE.PointsMaterial({color: new THREE.Color(tensorImg[i][0]/255, tensorImg[i][1]/255, tensorImg[i][2]/255)})
-  //   let point = new THREE.Points(geometry, material)
-  //   scene.add(point)
-  // }
   let geometry = new THREE.BufferGeometry()
-  let positions = []
-  let colors = []
-  for (let i = 0; i < tensorImg.length; i+=4) {
-    positions.push(tensorImg[i][0], tensorImg[i][1], tensorImg[i][2])
-    colors.push(tensorImg[i][0]/255, tensorImg[i][1]/255, tensorImg[i][2]/255)
+  let positions = new Uint8Array(tensorImg)
+  let colors = []//new Uint8Array(tensorImg)
+  for (let i = 0; i < tensorImg.length; i+=3) {
+    // positions.push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
+    colors.push(tensorImg[i]/255, tensorImg[i+1]/255, tensorImg[i+2]/255)
   }
   geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geometry.addAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
@@ -208,14 +200,9 @@ const getTensorFromImg = () => {
   let img = offsetCanvas.getContext('2d').getImageData(0, 0, offsetCanvas.width, offsetCanvas.height).data
   console.log(img.length)
   for (let i = 0; i < img.length; i+=4) {
-    tensorImg.push([img[i], img[i+1], img[i+2]])
-    points.push({x: img[i], y: img[i+1], z: img[i+2]})
+    tensorImg.push(img[i], img[i+1], img[i+2])
   }
-  // for (let i = 0; i < offsetCanvas.width; i++) {
-  //   for (let j = 0; j < offsetCanvas.height; j++) {
-  //     tensorImg.push( offsetCanvas.getContext('2d').getImageData(i, j, 1, 1).data.slice(0, 3) )
-  //   }
-  // }
+  tensorImg = new Uint8Array(tensorImg)
 }
 
 ///////////////////////////
