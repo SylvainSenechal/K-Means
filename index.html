@@ -1,31 +1,112 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title> K-means </title>
+    <title> K-Means </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="K-Means image clustering interactive web algorithm in 3D with Three.js">
+    <meta name="author" content="Sylvain Senechal">
+    <meta charset="utf-8">
+
     <script defer src="three.min.js"></script>
     <script defer src="script.js" ></script>
   </head>
   <body>
-    <canvas id="canvasImg">
-      Your browser doesn't support the Canvas API
-    </canvas>
+    <div id="container">
+      <div id="parameters">
+        <input id="imgInput" type="file">
+        <div id="kCluster">
+          <div id="nbCluster"> 3 Clusters </div>
+          <div id="buttonCluster">
+            <button onclick="addCluster()"> + </button>
+            <button onclick="removeCluster()"> - </button>
+          </div>
+        </div>
+        <div id="nbIterations"> K-Means 0 iterations </div>
+        <div id="dst"> Distance kmeans : </div>
+        <div id="instructions"> instructions </div>
+        <div id="source"> Source code </div>
+        <a id="git" href="https://github.com/SylvainSenechal/K-means"><img src="gitIcon.png"></a>
+      </div>
+      <div>
+        <canvas id="canvasImg">
+          Your browser doesn't support the Canvas API
+        </canvas>
+      </div>
+    </div>
+
     <div id="canvas3D"> </div>
-    <input id="imgInput" type="file">
   </body>
 </html>
 
 <style>
-body {
-  margin: 0;
+
+* {
+  box-sizing: border-box;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  font-family: "Helvetica", "Arial", sans-serif;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
 }
 
 #canvasImg {
   /* display: block; */
-  position: absolute;
-  z-index: 2;
+  /* position: absolute; */
+  /* z-index: 2;
   top: 0;
-  left: 0;
+  left: 0; */
+  padding-left: 10px;
+}
+#parameters {
+  display: flex;
+  align-items: center;
+  margin: 10px;
+  padding: 10px;
+  height: 60px;
+  z-index: 3;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+#parameters > * {
+  /* margin: 10px; */
+}
+#kCluster {
+  display: flex;
+  align-items: center;
+  padding-left: 30px;
+  padding-right: 30px;
+  border-left: 1px solid #aaaaaa;
+  border-right: 1px solid #aaaaaa;
+}
+#buttonCluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#buttonCluster > *{
+  margin: 3px;
+  outline: none;
+  border: solid 1px #cccccc;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.08);
+  width: 20px;
+  height: 20px;
+  border-radius: 10%;
+  cursor: pointer;
+}
+
+#nbIterations, #instructions, #dst {
+  border-right: 1px solid #aaaaaa;
+  padding-right: 30px;
+  padding-left: 30px;
+}
+#source {
+  padding-left: 30px;
+}
+#git {
+  padding-left: 10px;
 }
 
 #canvas3D {
@@ -35,19 +116,6 @@ body {
   left: 0;
 }
 
-#imgInput {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  left: 0;
-}
 
-/* * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: linear-gradient(#42cbf4, #f7d9aa);
-} */
 
 </style>

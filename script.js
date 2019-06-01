@@ -6,9 +6,10 @@ let scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, cont
 
 let tensorImg = []
 let image
-let nbCluster = 4 // TODO: Chercher le meilleur k dans l'algo
+let nbCluster = 3 // TODO: Chercher le meilleur k dans l'algo
 let middleCluster = []
 let clusters = Array(nbCluster).fill().map( () => [])
+let nbIterations = 0
 
 const initkMeans = () => {
   for (let i = 0; i < nbCluster; i++) {
@@ -83,6 +84,8 @@ const kMeanIteration = () => {
   }
   dstTotal()
   drawImageSegmentation()
+  nbIterations++
+  document.getElementById("nbIterations").innerHTML = `K-Means ${nbIterations} iterations`
 }
 
 const dstTotal = () => {
@@ -97,16 +100,11 @@ const dstTotal = () => {
     // middleCluster[i].mesh.geometry = new THREE.SphereGeometry(dst/(clusters[i].length)/2, 6, 6)
   }
   console.log("Distance kmeans : ", dst)
+  document.getElementById("dst").innerHTML = `Distance K-Means : ${Math.floor(dst)}`
 }
 
 const drawImageSegmentation = () => {
-  let a = new Uint8ClampedArray(image.length)
-  // for (let i = 0; i < offsetCanvas.width*offsetCanvas.height*4; i+=4) {
-  //   a[i] = 255
-  //   a[i+1] = 0
-  //   a[i+2] = 0
-  //   a[i+3] = 255
-  // }
+  let segmentedImage = new Uint8ClampedArray(image.length)
   for (let i = 0; i < image.length; i+=4) {
     let clusterIndex = 0
     let minDst = 10000
@@ -117,15 +115,38 @@ const drawImageSegmentation = () => {
         clusterIndex = j
       }
     }
-    a[i] = middleCluster[clusterIndex].x
-    a[i+1] = middleCluster[clusterIndex].y
-    a[i+2] = middleCluster[clusterIndex].z
-    a[i+3] = 255
+    segmentedImage[i] = middleCluster[clusterIndex].x
+    segmentedImage[i+1] = middleCluster[clusterIndex].y
+    segmentedImage[i+2] = middleCluster[clusterIndex].z
+    segmentedImage[i+3] = 255
     // clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
   }
 
-  let data = new ImageData(a, offsetCanvas.width, offsetCanvas.height)
+  let data = new ImageData(segmentedImage, offsetCanvas.width, offsetCanvas.height)
   ctx.putImageData(data, 0, 0)
+}
+
+const addCluster = () => {
+  camera.lookAt(100, 100, 100)
+  let index = Math.floor(Math.random()*(tensorImg.length/3))*3 // premier centres randoms mais sur un point
+  let x = tensorImg[index]
+  let y = tensorImg[index+1]
+  let z = tensorImg[index+2]
+  let geometry = new THREE.SphereGeometry(10, 6, 6)
+  let material = new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true})
+  let sphere = new THREE.Mesh(geometry, material)
+  sphere.position.set(x, y, z)
+  scene.add(sphere)
+  middleCluster.push({x: x, y: y, z: z, mesh: sphere})
+  nbCluster++
+  document.getElementById("nbCluster").innerHTML = `${nbCluster} Clusters`
+}
+const removeCluster = () => {
+  camera.lookAt(100, 100, 100)
+  let removed = middleCluster.pop()
+  scene.remove(removed.mesh)
+  nbCluster--
+  document.getElementById("nbCluster").innerHTML = `${nbCluster} Clusters`
 }
 
 const init = () => {
@@ -243,7 +264,7 @@ const drawTensor = () => {
   let material = new THREE.PointsMaterial({size: 1, vertexColors: THREE.VertexColors})
   let points = new THREE.Points(geometry, material)
   scene.add(points)
-  camera.lookAt(0, 0, 0)
+  camera.lookAt(100, 100, 100)
 
   initkMeans()
 }
@@ -308,13 +329,13 @@ document.onkeyup = e => {
 	if(e.keyCode == 81) { gauche = 	false }
 }
 
-document.onclick = e => {
+document.getElementById("canvas3D").onclick = e => {
   let elem = document.getElementById("canvas3D")
   elem.requestPointerLock = elem.requestPointerLock    ||
                             elem.mozRequestPointerLock
   elem.requestPointerLock()
 }
-document.onmousemove = e => {
+document.getElementById("canvas3D").onmousemove = e => {
 	mouse.x = ( e.clientX / window.innerWidth ) * 2 - 1
 	mouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1
 
