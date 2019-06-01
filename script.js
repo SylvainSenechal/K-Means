@@ -5,7 +5,8 @@ let ctx, canvas, offsetCanvas
 let scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container
 
 let tensorImg = []
-let nbCluster = 7 // TODO: Chercher le meilleur k dans l'algo
+let image
+let nbCluster = 4 // TODO: Chercher le meilleur k dans l'algo
 let middleCluster = []
 let clusters = Array(nbCluster).fill().map( () => [])
 
@@ -15,15 +16,15 @@ const initkMeans = () => {
     let x = tensorImg[index]
     let y = tensorImg[index+1]
     let z = tensorImg[index+2]
-    let geometry = new THREE.BoxGeometry(10, 10, 10)
-    let material = new THREE.MeshBasicMaterial( {color: 0x00ff00} )
-    let cube = new THREE.Mesh(geometry, material)
-    cube.position.set(x, y, z)
-    scene.add(cube)
-    middleCluster[i] = {x: x, y: y, z: z, mesh: cube}
+    let geometry = new THREE.SphereGeometry(10, 6, 6)
+    let material = new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true})
+    let sphere = new THREE.Mesh(geometry, material)
+    sphere.position.set(x, y, z)
+    scene.add(sphere)
+    middleCluster[i] = {x: x, y: y, z: z, mesh: sphere}
   }
-
-  for (let i = 0; i < tensorImg.length; i+=3) { // Assignation des points
+  // Première Assignation des points
+  for (let i = 0; i < tensorImg.length; i+=3) {
     let clusterIndex = 0
     let minDst = 10000
     for (let j = 0; j < nbCluster; j++) {
@@ -35,10 +36,8 @@ const initkMeans = () => {
     }
     clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
   }
-}
 
-const kMeanIteration = () => {
-  // calcul middleCluster :
+  // Premier calcul middleCluster :
   for (let i = 0; i < nbCluster; i++) {
     let x = 0
     let y = 0
@@ -51,8 +50,11 @@ const kMeanIteration = () => {
     middleCluster[i].mesh.position.set(x/(clusters[i].length/3), y/(clusters[i].length/3), z/(clusters[i].length/3))
     middleCluster[i] = {x: x/(clusters[i].length/3), y: y/(clusters[i].length/3), z: z/(clusters[i].length/3), mesh: middleCluster[i].mesh}
   }
+  drawImageSegmentation()
+}
 
-  // Assignation points
+const kMeanIteration = () => {
+  // Re-assignation points
   clusters = Array(nbCluster).fill().map( () => [])
   for (let i = 0; i < tensorImg.length; i+=3) {
     let clusterIndex = 0
@@ -66,7 +68,21 @@ const kMeanIteration = () => {
     }
     clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
   }
+  // calcul middleCluster :
+  for (let i = 0; i < nbCluster; i++) {
+    let x = 0
+    let y = 0
+    let z = 0
+    for (let j = 0; j < clusters[i].length; j+=3) {
+      x += clusters[i][j]
+      y += clusters[i][j+1]
+      z += clusters[i][j+2]
+    }
+    middleCluster[i].mesh.position.set(x/(clusters[i].length/3), y/(clusters[i].length/3), z/(clusters[i].length/3))
+    middleCluster[i] = {x: x/(clusters[i].length/3), y: y/(clusters[i].length/3), z: z/(clusters[i].length/3), mesh: middleCluster[i].mesh}
+  }
   dstTotal()
+  drawImageSegmentation()
 }
 
 const dstTotal = () => {
@@ -74,9 +90,42 @@ const dstTotal = () => {
   for (let i = 0; i < nbCluster; i++) {
     for (let j = 0; j < clusters[i].length; j+=3) {
       dst += Math.abs(clusters[i][j] - middleCluster[i].x) + Math.abs(clusters[i][j+1] - middleCluster[i].y) + Math.abs(clusters[i][j+2] - middleCluster[i].z)
+      // dst += Math.sqrt( (clusters[i][j] - middleCluster[i].x)*(clusters[i][j] - middleCluster[i].x)
+      //                 + (clusters[i][j+1] - middleCluster[i].y)*(clusters[i][j+1] - middleCluster[i].y)
+      //                 + (clusters[i][j+2] - middleCluster[i].z)*(clusters[i][j+2] - middleCluster[i].z) )
     }
+    // middleCluster[i].mesh.geometry = new THREE.SphereGeometry(dst/(clusters[i].length)/2, 6, 6)
   }
   console.log("Distance kmeans : ", dst)
+}
+
+const drawImageSegmentation = () => {
+  let a = new Uint8ClampedArray(image.length)
+  // for (let i = 0; i < offsetCanvas.width*offsetCanvas.height*4; i+=4) {
+  //   a[i] = 255
+  //   a[i+1] = 0
+  //   a[i+2] = 0
+  //   a[i+3] = 255
+  // }
+  for (let i = 0; i < image.length; i+=4) {
+    let clusterIndex = 0
+    let minDst = 10000
+    for (let j = 0; j < nbCluster; j++) {
+      let dst = Math.abs(image[i] - middleCluster[j].x) + Math.abs(image[i+1] - middleCluster[j].y) + Math.abs(image[i+2] - middleCluster[j].z)
+      if (dst < minDst) {
+        minDst = dst
+        clusterIndex = j
+      }
+    }
+    a[i] = middleCluster[clusterIndex].x
+    a[i+1] = middleCluster[clusterIndex].y
+    a[i+2] = middleCluster[clusterIndex].z
+    a[i+3] = 255
+    // clusters[clusterIndex].push(tensorImg[i], tensorImg[i+1], tensorImg[i+2])
+  }
+
+  let data = new ImageData(a, offsetCanvas.width, offsetCanvas.height)
+  ctx.putImageData(data, 0, 0)
 }
 
 const init = () => {
@@ -148,23 +197,28 @@ const createLights = () => {
 }
 
 const createAxis = () => {
-  let geometryRed = new THREE.Geometry()
-  let materialRed = new THREE.LineBasicMaterial({color: 0xff0000})
-  geometryRed.vertices.push(new THREE.Vector3(0, 0, 0))
-  geometryRed.vertices.push(new THREE.Vector3(255, 0, 0))
-  let redLine = new THREE.Line(geometryRed, materialRed)
+  let geometryRed = new THREE.CylinderGeometry(3, 3, 255, 16)
+  let materialRed = new THREE.MeshBasicMaterial({color: 0xff0000})
+  // geometryRed.vertices.push(new THREE.Vector3(0, 0, 0))
+  // geometryRed.vertices.push(new THREE.Vector3(255, 0, 0))
+  let redLine = new THREE.Mesh(geometryRed, materialRed)
+  redLine.position.set(127, 0, 0)
+  redLine.rotateZ(Math.PI*90/180)
 
-  let geometryGreen = new THREE.Geometry()
-  let materialGreen = new THREE.LineBasicMaterial({color: 0x00ff00})
-  geometryGreen.vertices.push(new THREE.Vector3(0, 0, 0))
-  geometryGreen.vertices.push(new THREE.Vector3(0, 255, 0))
-  let greenLine = new THREE.Line(geometryGreen, materialGreen)
+  let geometryGreen = new THREE.CylinderGeometry(3, 3, 255, 16)
+  let materialGreen = new THREE.MeshBasicMaterial({color: 0x00ff00})
+  // geometryGreen.vertices.push(new THREE.Vector3(0, 0, 0))
+  // geometryGreen.vertices.push(new THREE.Vector3(0, 255, 0))
+  let greenLine = new THREE.Mesh(geometryGreen, materialGreen)
+  greenLine.position.set(0, 127, 0)
 
-  let geometryBlue = new THREE.Geometry()
-  let materialBlue = new THREE.LineBasicMaterial({color: 0x0000ff})
-  geometryBlue.vertices.push(new THREE.Vector3(0, 0, 0))
-  geometryBlue.vertices.push(new THREE.Vector3(0, 0, 255))
-  let blueLine = new THREE.Line(geometryBlue, materialBlue)
+  let geometryBlue = new THREE.CylinderGeometry(3, 3, 255, 16)
+  let materialBlue = new THREE.MeshBasicMaterial({color: 0x0000ff})
+  // geometryBlue.vertices.push(new THREE.Vector3(0, 0, 0))
+  // geometryBlue.vertices.push(new THREE.Vector3(0, 0, 255))
+  let blueLine = new THREE.Mesh(geometryBlue, materialBlue)
+  blueLine.position.set(0, 0, 127)
+  blueLine.rotateX(Math.PI*90/180)
 
   var geometry = new THREE.BoxGeometry(258, 258, 258)
   var material = new THREE.MeshBasicMaterial({color: 0x000000, opacity: 0.3, wireframe: true})
@@ -197,17 +251,17 @@ const drawTensor = () => {
 
 const getTensorFromImg = () => {
   // tensorImg = Array(offsetCanvas.width).fill(3).map( (_, id1) => Array(offsetCanvas.height).fill().map( (_, id2) => offsetCanvas.getContext('2d').getImageData(id1, id2, 1, 1).data.slice(0, 3)))
-  let img = offsetCanvas.getContext('2d').getImageData(0, 0, offsetCanvas.width, offsetCanvas.height).data
-  console.log(img.length)
-  for (let i = 0; i < img.length; i+=4) {
-    tensorImg.push(img[i], img[i+1], img[i+2])
+  image = offsetCanvas.getContext('2d').getImageData(0, 0, offsetCanvas.width, offsetCanvas.height).data
+  console.log(image.length)
+  for (let i = 0; i < image.length; i+=4) {
+    tensorImg.push(image[i], image[i+1], image[i+2])
   }
   tensorImg = new Uint8Array(tensorImg)
 }
 
-///////////////////////////
-// Movement functions /////
-///////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Movement functions /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 let mouse = new THREE.Vector2()
 let haut, bas, droite, gauche
 let vitesseX = 0
