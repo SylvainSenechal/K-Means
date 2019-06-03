@@ -183,6 +183,7 @@ const uploadImage = e => {
       offsetCanvas.width = img.width
       offsetCanvas.height = img.height
       offsetCanvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height)
+      document.getElementById("canvasContainer").style.width = `${offsetCanvas.width+10}px`
       getTensorFromImg()
       drawTensor()
     }
