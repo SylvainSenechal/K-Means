@@ -55,6 +55,8 @@ const initkMeans = () => {
 }
 
 const kMeanIteration = () => {
+  camera.lookAt(100, 100, 100)
+  document.exitPointerLock()
   // Re-assignation points
   clusters = Array(nbCluster).fill().map( () => [])
   for (let i = 0; i < tensorImg.length; i+=3) {
@@ -140,6 +142,7 @@ const addCluster = () => {
   middleCluster.push({x: x, y: y, z: z, mesh: sphere})
   nbCluster++
   document.getElementById("nbCluster").innerHTML = `${nbCluster} Clusters`
+  document.getElementById("btnAdd").blur()
 }
 const removeCluster = () => {
   camera.lookAt(100, 100, 100)
@@ -147,6 +150,7 @@ const removeCluster = () => {
   scene.remove(removed.mesh)
   nbCluster--
   document.getElementById("nbCluster").innerHTML = `${nbCluster} Clusters`
+  document.getElementById("btnRm").blur()
 }
 
 const init = () => {
@@ -185,6 +189,7 @@ const uploadImage = e => {
     img.src = event.target.result
   }
   reader.readAsDataURL(e.target.files[0])
+  document.getElementById("imgInput").blur()
 }
 
 const createScene = () => {
@@ -315,18 +320,18 @@ const move = () => {
 }
 
 document.onkeydown = e => {
-  kMeanIteration()
+  if (e.keyCode === 32) kMeanIteration()
 
-	if(e.keyCode == 90) { haut 	= 	true }
-	if(e.keyCode == 68) { droite = 	true }
-	if(e.keyCode == 83) { bas 	  = 	true }
-	if(e.keyCode == 81) { gauche = 	true }
+	if(e.keyCode === 90 || e.keyCode === 38 ) { haut 	= true }
+	if(e.keyCode === 68 || e.keyCode === 39) { droite = true }
+	if(e.keyCode === 83 || e.keyCode === 40) { bas 	  = true }
+	if(e.keyCode === 81 || e.keyCode === 37) { gauche = true }
 }
 document.onkeyup = e => {
-	if(e.keyCode == 90) { haut 	= 	false }
-	if(e.keyCode == 68) { droite = 	false }
-	if(e.keyCode == 83) { bas 	  = 	false }
-	if(e.keyCode == 81) { gauche = 	false }
+	if(e.keyCode === 90 || e.keyCode === 38) { haut 	=	false }
+	if(e.keyCode === 68 || e.keyCode === 39) { droite = false }
+	if(e.keyCode === 83 || e.keyCode === 40) { bas 	  = false }
+	if(e.keyCode === 81 || e.keyCode === 37) { gauche = false }
 }
 
 document.getElementById("canvas3D").onclick = e => {

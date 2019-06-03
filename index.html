@@ -17,24 +17,38 @@
         <div id="kCluster">
           <div id="nbCluster"> 3 Clusters </div>
           <div id="buttonCluster">
-            <button onclick="addCluster()"> + </button>
-            <button onclick="removeCluster()"> - </button>
+            <button id="btnAdd" onclick="addCluster()"> + </button>
+            <button id="btnRm" onclick="removeCluster()"> - </button>
           </div>
         </div>
-        <div id="nbIterations"> K-Means 0 iterations </div>
+        <div id="iterations">
+          <div id="nbIterations"> K-Means 0 iterations </div>
+          <button id="iterateButton" onclick="kMeanIteration()"> Iterate (spacebar) </button>
+        </div>
         <div id="dst"> Distance kmeans : </div>
-        <div id="instructions"> instructions </div>
+        <div id="instructions">
+          <div> Read Instructions </div>
+          <div id="textInstructions">
+            <ul>
+              <li> Pick a picture from your computer </li>
+              <li> Iterate Kmean algorithm with the button or spacebar </li>
+              <li> You can add or remove Clusters </li>
+              <li> Look around with your mouse </li>
+              <li> Move around with zqsd or arrow keys </li>
+            </ul>
+          </div>
+        </div>
         <div id="source"> Source code </div>
-        <a id="git" href="https://github.com/SylvainSenechal/K-means"><img src="gitIcon.png"></a>
+        <a id="git" href="https://github.com/SylvainSenechal/K-means"><img src="images/gitIcon.png"></a>
       </div>
-      <div>
+      <div id="canvasContainer">
         <canvas id="canvasImg">
           Your browser doesn't support the Canvas API
         </canvas>
       </div>
+      <div id="canvas3D"> </div>
     </div>
 
-    <div id="canvas3D"> </div>
   </body>
 </html>
 
@@ -54,25 +68,20 @@
 }
 
 #canvasImg {
-  /* display: block; */
-  /* position: absolute; */
-  /* z-index: 2;
-  top: 0;
-  left: 0; */
   padding-left: 10px;
 }
 #parameters {
   display: flex;
   align-items: center;
+  justify-content: center;
   margin: 10px;
   padding: 10px;
   height: 60px;
   z-index: 3;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  background: white;
 }
-#parameters > * {
-  /* margin: 10px; */
-}
+
 #kCluster {
   display: flex;
   align-items: center;
@@ -97,7 +106,24 @@
   cursor: pointer;
 }
 
-#nbIterations, #instructions, #dst {
+#iterateButton {
+  margin: 3px;
+  outline: none;
+  border: solid 1px #cccccc;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.08);
+  width: 140px;
+  height: 30px;
+  cursor: pointer;
+}
+
+#iterations {
+  display: flex;
+  align-items: center;
+}
+#nbIterations {
+  padding-right: 10px;
+}
+#iterations, #instructions, #dst {
   border-right: 1px solid #aaaaaa;
   padding-right: 30px;
   padding-left: 30px;
@@ -108,7 +134,22 @@
 #git {
   padding-left: 10px;
 }
-
+#instructions:hover #textInstructions {
+  display: block;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  min-width: 150px;
+  padding: 12px 16px;
+  background-color: #f9f9f9;
+  margin-top: 30px;
+  margin-left: -80px;
+}
+#textInstructions {
+  display: none;
+  position: absolute;
+}
+ #canvasContainer {
+   z-index: 2;
+ }
 #canvas3D {
   position: absolute;
   z-index: 1;
